@@ -1,0 +1,861 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>  
+        <meta charset="utf-8">  
+        <title>中国地图</title>  
+	
+  </script>
+  </head> 
+<style>
+ .tooltip{
+	 font-family: simsun;
+	 font-size: 14px;
+	 width: 120;
+	 height: auto;
+	 position: absolute;
+	 text-align: center;
+    border-style: solid; 
+	 border-width: 1px;
+	 background-color:#FFEBCD;
+	 border-radius: 5px;
+  }
+ .map_0{
+      position:relative;
+	}
+  .map_1{
+      float:left;
+	   position:absolute;
+	}
+			 
+	.map_2{
+	     
+		  right:200px;
+		  position:absolute;
+	}	
+	.map_3{
+       top:450px;
+		  right:100px;
+		  position:absolute;
+	}	
+	.axis path,
+	.axis line{
+		fill: none;
+		stroke: black;
+		shape-rendering: crispEdges;
+	}
+
+	.axis text {
+		font-family: sans-serif;
+		font-size: 11px;
+	}
+
+	.MyRect {
+		fill: steelblue;
+	}
+
+	.MyText {
+		fill: white;
+		text-anchor: middle;
+	}
+body{
+height: 100%;
+}
+.title{font-family:Arial,微软雅黑;font-size:18px;text-anchor:middle;}
+.subTitle{font-family:Arial,宋体;font-size:12px;text-anchor:middle;fill:#666}
+.axis path,
+.axis line {
+fill: none;
+stroke: black;
+shape-rendering: crispEdges;
+}
+.axis text {
+font-family: sans-serif;
+font-size: 11px;
+fill:#999;
+}
+.inner_line path,
+.inner_line line {
+fill: none;
+stroke:#E7E7E7;
+shape-rendering: crispEdges;
+}
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="simpleD3Slider.js"></script>
+  <div>
+  <form name="single" action="" method=""  style="position:absolute;top:820px;left:20px;">
+      <select id="test"  name="test"  style = "height:25px;font-size:15px;border-radius:10px">   	  	
+			<option value="0">生产总值</option>   
+			<option value="1">第一产业</option>
+			<option value="2">第二产业</option>
+			<option value="3">第三产业</option>   
+		</select>
+	</form>
+	<form name="single1" action="" method=""  style="position:absolute;top:450px;right:15px;">
+      <select id="test1"  name="test1"  style = "height:25px;font-size:15px;border-radius:10px">   	  	
+			<option value="0">产业</option> 
+			<option value="1">第一产业</option>
+			<option value="2">第二产业</option>
+			<option value="3">第三产业</option>   
+		</select>
+	</form>
+	
+	</div>
+	<div class="map_0">
+	<div class="map_1"></div>
+	<div class="map_2"></div>
+	<div class="map_3"></div>
+	</div>
+   <script type="text/javascript">
+   
+	var width  = 1000;
+	var height = 780;
+	//定义svg
+	var svg = d3.select("body").append("svg")
+	    .attr("width", width)
+	    .attr("height", height)
+	    .append("g")
+	    .attr("transform", "translate(0,0)")
+		.attr("class","map_1");
+    //定义滑条
+	var slider1 = new simpleSlider();
+	
+	var projection = d3.geo.mercator()
+						.center([105, 36])
+						.scale(850)
+    					.translate([width/2, height/2]);
+	var path = d3.geo.path()
+					.projection(projection);
+    //提示框1
+    var tooltip = d3.select("body")
+							.append("div")
+							.attr("class","tooltip")
+							.style("opacity",0.0);
+    //提示框2
+    var tooltip1 = d3.select("body")
+							.append("div")
+							.attr("class","tooltip")
+							.style("opacity",0.0);
+	//提示框3
+    var tooltip2 = d3.select("body")
+							.append("div")
+							.attr("class","tooltip")
+							.style("opacity",0.0);
+	//地图
+	var map;
+	//数据年份
+	var ProviceNum=62;
+	//所选年份显示
+	var text=d3.select("body")
+		.insert("h2", ":first-child")
+		.text("现在是:2013年");
+	//所选省份
+	var text1 = svg.append("text")
+		.attr("x",750)
+		.attr("y",15)
+		.attr("font-size",18)
+		.attr("font-family","黑体")
+		.text("城市:");
+	//添加一个g标签  
+     var china =svg.append("g"); 
+    //读取数据	 
+	 readmap();
+    //画地图	
+	d3.json("china.geojson", function(error, root) {
+		
+		if (error) 
+			return console.error(error);
+		//console.log(root.features);
+		
+		map=china.selectAll("path")
+			.data( root.features )
+			.enter()
+			.append("path")
+			.attr("stroke","#000")
+			.attr("stroke-width",1)
+			.attr("d", path )
+			.attr("fill",function(d,i){
+					
+				return fillPros(d,i);		
+			})
+			.on("mouseover",function(d,i){
+                d3.select(this)
+                    .attr("fill","yellow");
+                tooltip.html(function(){
+				        var year=parseInt(slider1.value()*61+1891);
+				        var value=(d.properties.id-1)*ProviceNum+2013-year;
+				        var selectvalue= document.single.test.value;
+				        if(selectvalue==0)
+						   return d.properties.name+" "+year+"年 "+"<br>"+"生产总值"+"<br>"+"数值:"+GDPdata[value];
+					    else if(selectvalue==1)
+						   return d.properties.name+" "+year+"年 "+"<br>"+"第一产业"+"<br>"+"数值:"+GDPdata1[value];
+					    else if(selectvalue==2)
+						   return d.properties.name+" "+year+"年 "+"<br>"+"第二产业"+"<br>"+"数值:"+GDPdata2[value];
+					    else 
+                           return d.properties.name+" "+year+"年 "+"<br>"+"第三产业"+"<br>"+"数值:"+GDPdata3[value];
+					  })
+					  .style("left", (d3.event.pageX) + "px")
+					  .style("top", (d3.event.pageY + 20) + "px")
+					  .style("opacity",1.0);
+            })
+            .on("mousemove",function(d,i){
+				/* 鼠标移动时，更改样式 left 和 top 来改变提示框的位置 */
+				
+				tooltip.style("left", (d3.event.pageX) + "px")
+						.style("top", (d3.event.pageY + 20) + "px");
+			})
+            .on("mouseout",function(d,i){
+                d3.select(this)
+                    .attr("fill",function(d,i){
+						return fillPros(d,i);
+						
+					});
+                tooltip.style("opacity",0.0);
+            })
+			.on("click",function(d){
+					var year=parseInt(slider1.value()*61+1891);
+		            var value=(d.properties.id-1)*ProviceNum+2013-year;
+					var selectvalue= document.single1.test1.value;
+                    svg1.selectAll("g").remove();
+					dataset=[GDPdata1[value],GDPdata2[value],GDPdata3[value]];
+					//画环
+					drawPie();
+					text1.text("城市:"+d.properties.name);
+					value1=(d.properties.id-1)*ProviceNum;
+					var k=0;
+					for(var i=value1;i<value1+ProviceNum;i++)
+					{
+						if(selectvalue==0)
+						{
+							dataRect[k]=GDPdata[i];
+							title="GDP "+d.properties.name;
+						}
+						else if(selectvalue==1)
+						{
+							dataRect[k]=GDPdata1[i];
+							title="第一产业 "+d.properties.name;
+						}
+						else if(selectvalue==2)
+						{
+							dataRect[k]=GDPdata2[i];
+							title="第二产业 "+d.properties.name;
+						}
+						else if(selectvalue==3)
+						{
+							dataRect[k]=GDPdata3[i];
+							title="第三产业 "+d.properties.name;
+						}
+						k++;
+					}
+					cityname=d.properties.name;
+					cityid=(d.properties.id-1)*ProviceNum;
+					drawRect();
+
+			})
+			.on("dblclick",function(d){
+					text1.text("城市:");
+			});
+		
+	});
+	
+	//GDP数据
+	var GDPdata = new Array();  
+    var GDPdata1 = new Array(); 
+	var GDPdata2 = new Array(); 
+	var GDPdata3 = new Array(); 
+    var Gdp1Total= new Array();
+	var Gdp2Total= new Array();
+	var Gdp3Total= new Array();
+	var GdpAll = new Array(); 
+	var Inone=new Array(); 
+	var Intwo=new Array(); 
+	var Inthree=new Array(); 
+	var outerRadius_1 = new Array(); 
+	var datas=new Array(); 
+	var dataRect= new Array();
+    //颜色插值函数
+	var computeColor;
+	//映射
+	var linearAveGdp;
+	var linearAveGdp1;
+	var linearAveGdp2;
+	var linearAveGdp3;
+   
+	//读取数据
+	function readmap(){
+	    d3.csv("ChinaGDP.csv",function(error,csvdata){
+			console.log(csvdata);
+			if(error){
+				//console.log(error);
+				return error;
+			}
+			//console.log("csvdata:"+csvdata);
+			for( var i=0; i<csvdata.length; i++ ){
+				GDPdata[i]=csvdata[i].Gdp;
+				GDPdata1[i]=csvdata[i].Gdp1;
+				GDPdata2[i]=csvdata[i].Gdp2;
+				GDPdata3[i]=csvdata[i].Gdp3;
+			}
+			for( var i=0; i<ProviceNum; i++ ){
+					Gdp1Total[i]= csvdata[i].Gdp1Total;
+				    Gdp2Total[i]= csvdata[i].Gdp2Total;
+				    Gdp3Total[i]= csvdata[i].Gdp3Total;
+				    GdpAll[i]=csvdata[i].GdpAll; 	
+				    Inone[i]=Gdp1Total[i]/GdpAll[i];
+				    Intwo[i]=Gdp2Total[i]/GdpAll[i];
+				    Inthree[i]=Gdp3Total[i]/GdpAll[i];
+			}
+		});	
+	}
+	
+	function fillPros(d,i){
+	         var selectvalue= document.single.test.value;
+			//这里选择 所有年份所有省份的最大值(人均，第一，第二，第三产业)
+			var maxvalue = d3.max(GDPdata);
+			var maxvalue1 = d3.max(GDPdata1);
+			var maxvalue2 = d3.max(GDPdata2);
+			var maxvalue3 = d3.max(GDPdata3);
+			var minvalue = 0;
+            //定义一个线性比例尺，将最小值和最大值之间的值映射到[0, 1]
+			linearAveGdp = d3.scale.linear()
+							.domain([minvalue,maxvalue])
+							.range([0, 1]);
+			linearAveGdp1 = d3.scale.linear()
+							.domain([minvalue,maxvalue1])
+							.range([0, 1]);
+			linearAveGdp2 = d3.scale.linear()
+							.domain([minvalue,maxvalue2])
+							.range([0, 1]);
+			linearAveGdp3 = d3.scale.linear()
+							.domain([minvalue,maxvalue3])
+							.range([0, 1]);
+			//定义最小值和最大值对应的颜色
+
+		    var a = d3.rgb(0,255,255);	//选择rgb差距大的两种颜色作为对比
+		    var b = d3.rgb(255,0,255);	
+						 
+			//颜色插值函数
+		    computeColor = d3.interpolate(a,b);
+			var year=parseInt(slider1.value()*61+1891);
+			var value=(d.properties.id-1)*ProviceNum+2013-year;
+			if(selectvalue==0)
+			  var t = linearAveGdp(GDPdata[value]);
+			else if(selectvalue==1)
+			  var t = linearAveGdp1(GDPdata1[value]);
+			else if(selectvalue==2)
+			  var t = linearAveGdp2(GDPdata2[value]);
+			else
+			  var t = linearAveGdp3(GDPdata3[value]);
+			  
+			if(t!=0){
+				var color = computeColor(t);
+				return color.toString();
+			}
+			if(t==0){
+				return '#FFFFFF';
+			}
+							
+	}
+	//选择集1
+	d3.selectAll("#test").on("change",function(){
+            //重新给地图涂色
+            map.attr("fill", function(d,i){
+				return fillPros(d,i);
+			});
+			var selectvalue= document.single.test.value;
+			
+			tooltip.html(function(){
+				    var year=parseInt(slider1.value()*61+1891);
+				    var value=(d.properties.id-1)*ProviceNum+2013-year;
+				    if(selectvalue==0)
+					{
+						 return d.properties.name+" "+year+"年 "+"<br>"+"生产总值"+"<br>"+"数值:"+GDPdata[value];
+					}
+					else if(selectvalue==1)
+					{
+						 return d.properties.name+" "+year+"年 "+"<br>"+"第一产业"+"<br>"+"数值:"+GDPdata1[value];
+					}
+					else if(selectvalue==2)
+					{
+						  return d.properties.name+" "+year+"年 "+"<br>"+"第二产业"+"<br>"+"数值:"+GDPdata2[value];
+					}
+					else
+					{ 
+				         return d.properties.name+" "+year+"年 "+"<br>"+"第三产业"+"<br>"+"数值:"+GDPdata3[value];
+					}
+				})
+				.style("left", (d3.event.pageX) + "px")
+				.style("top", (d3.event.pageY + 20) + "px")
+				.style("opacity",1.0);
+			
+    });
+	//选择集2
+	d3.selectAll("#test1").on("change",function(){
+			var k=0
+			var selectvalue= document.single1.test1.value;
+			if(selectvalue==1)
+			{
+				for(var i=cityid;i<cityid+ProviceNum;i++)
+				{
+					dataRect[k]=GDPdata1[i];
+					k++;
+				}
+			    title="第一产业 "+cityname;
+			}
+			else if(selectvalue==2)
+			{
+				for(var i=cityid;i<cityid+ProviceNum;i++)
+				{
+					dataRect[k]=GDPdata2[i];
+					k++;
+				}
+			    title="第二产业 "+cityname;
+			}
+			else if(selectvalue==3)
+			{
+				for(var i=cityid;i<cityid+ProviceNum;i++)
+				{
+					dataRect[k]=GDPdata3[i];
+					k++;
+				}
+			    title="第三产业 "+cityname;
+			}
+			drawRect();
+			
+    });
+	//滑条显示
+    slider1.width(500).x(30).y(50).value(1).event(function(){
+
+        map.attr("fill", function(d,i){
+				return fillPros(d,i);
+				
+			})
+		text.text("现在是:"+parseInt(slider1.value()*61+1891)+"年");
+		var year=parseInt(slider1.value()*61+1891);
+		var value=2013-year;
+
+		svg1.selectAll("g").remove();
+		dataset=[Gdp1Total[value],Gdp2Total[value],Gdp3Total[value]];
+		//画环
+		drawPie();
+    });
+	svg.call(slider1);
+	
+	var arc, svg1,arcs;
+	var cityid=0;
+	var cityname="甘肃";
+	var dataset=[62652.65,331730.28,292510.94];
+	//画环
+	drawPie();
+//第二个svg	 
+function drawPie(){	
+		
+        //转化数据为适合生成饼图的对象数组
+        pie=d3.layout.pie(dataset);
+        var sum=d3.sum(dataset);
+        var h=360;
+        var w=400;
+        var outerRadius=150;//外半径
+
+        //圆环内半径
+        var innerRadius=100;
+
+        //用svg的path绘制弧形的内置方法
+        arc=d3.svg.arc()//设置弧度的内外径，等待传入的数据生成弧度
+            .outerRadius(outerRadius)
+            .innerRadius(innerRadius);
+
+        svg1=d3.select("body")
+                .append("svg")
+                .attr("width",w)
+                .attr("height",h).attr("class","map_2");
+        var text = svg1.append("text")
+						.attr("x",0)
+						.attr("y",350)
+						.attr("font-size",18)
+						.attr("font-family","黑体")
+						.text("第一产业、第二产业、第三产业比例");
+        //颜色函数
+        var color=d3.scale.category10();//创建序数比例尺和包括10中颜色的输出范围
+
+        //准备分组,把每个分组移到图表中心
+       arcs=svg1.selectAll("g.arc")
+            .data(pie(dataset))
+            .enter()
+            .append("g")
+            .attr("class","arc")
+            //移到图表中心
+            .attr("transform","translate("+outerRadius+","+outerRadius+")");//translate(a,b)a表示横坐标起点，b表示纵坐标起点
+			
+        //为组中每个元素绘制弧形路路径
+        arcs.append("path")//每个g元素都追加一个path元素用绑定到这个g的数据d生成路径信息
+            .attr("fill",function(d,i){//填充颜色
+				return color(i);
+            })
+            .attr("d",arc)//将角度转为弧度（d3使用弧度绘制）
+            .on("mouseover",function(d,i){
+               
+                tooltip1.html(function(){
+				        if(i==0)
+							var str="第一产业";
+						else if(i==1)
+							var str="第二产业";
+						else if(i==2)
+							var str="第三产业";
+						var str1=Number(d.value/sum*100).toFixed(2);
+                        str1+="%";
+				        return str+"<br>值:"+d.value+"<br>比例:"+str1;
+					  })
+					  .style("left", (d3.event.pageX+50) + "px")
+					  .style("top", (d3.event.pageY + 50) + "px")
+					  .style("opacity",1.0);
+            })
+            .on("mousemove",function(d,i){
+				/* 鼠标移动时，更改样式 left 和 top 来改变提示框的位置 */
+				
+				tooltip1.style("left", (d3.event.pageX+50) + "px")
+						.style("top", (d3.event.pageY + 50) + "px");
+			})
+			.on("mouseout",function(d,i){
+                
+                tooltip1.style("opacity",0.0);
+            });
+
+
+            //堆叠图
+                  var outerRadius1 =w/3-5;  
+					var innerRadius1 = w/5+5;  
+			//计算每年全国的三个产业总值来分配各产业扇形长度
+			
+		
+			
+						
+
+            var cur_1 = 0;
+			//存储第一产业的outerRadius
+					var pie1 = d3.layout.pie();
+					var outerRadius1= 95;  
+					var innerRadius1 = 65;  
+					 arc_1 = d3.svg.arc()
+									.innerRadius(innerRadius1)  
+									//.outerRadius(outerRadius1);
+									.outerRadius(function(d){
+									 var temp_data = (outerRadius1-innerRadius1)*Inone[cur_1]+innerRadius1;
+									 cur_1++;
+									 outerRadius_1[cur_1-1] = temp_data;
+									 	return temp_data;
+										
+									});  
+
+					var color = "#4682B4";  		
+					
+					var piedata_1 = pie1(Gdp1Total);
+					console.log(piedata_1);
+					for(var i = 0; i <parseInt(slider1.value()*61+1891) - 1951; i++)
+					{
+						piedata_1[i].startAngle = i*((Math.PI)*2/ProviceNum)+0.02;
+						piedata_1[i].endAngle = (i+1)*((Math.PI)*2/ProviceNum)	 - 0.02;
+					}
+					
+					//设置每个小扇形的固定角度
+					
+					var arcs_1 = svg1.selectAll("g.arc_1")  
+								  .data(piedata_1)  
+								  .enter() 
+								  .append("g") 
+                                  .attr("class","arc_1")
+								 //.attr("transform","translate(50,150)");  
+								   .attr("transform","translate("+outerRadius+","+outerRadius+")");
+				   
+				
+					
+				   
+					arcs_1.append("path")  
+						.attr("fill",function(d,i){  
+							return color;  
+						})
+						.attr("d",function(d){ 
+							return arc_1(d);  
+						});  
+
+
+//存储第二产业的outerRadius
+			var cur_2_in = -1;
+			var cur_2_out = 0;
+			var outerRadius_2 = [];
+					var pie2 = d3.layout.pie();
+					var arc_2 = d3.svg.arc()
+									.innerRadius(function(d){
+									cur_2_in++;
+										return outerRadius_1[cur_2_in];
+									})  
+									.outerRadius(function(d){
+									var temp_data = Intwo[cur_2_in]* (outerRadius1-innerRadius1)+outerRadius_1[cur_2_in];
+									cur_2_out++;
+									outerRadius_2[cur_2_out-1] = temp_data;
+										return temp_data;
+										
+									});  
+
+					var color = "#8DB6CD";  		
+					
+					var piedata_2 = pie2(Gdp2Total);
+					for(var i = 0; i <parseInt(slider1.value()*61+1891) - 1951; i++)
+					{
+						piedata_2[i].startAngle = i*((Math.PI)*2/ProviceNum)+0.01;
+						piedata_2[i].endAngle = (i+1)*((Math.PI)*2/ProviceNum)-0.01;
+					}
+					
+					//设置每个小扇形的固定角度
+					
+					var arcs_2 = svg1.selectAll("g.arc_2")  
+								  .data(piedata_2)  
+								  .enter()  
+								  .append("g")
+								  .attr("class","arc_2")
+								 // .attr("transform","translate(250,200)");  
+								  .attr("transform","translate("+outerRadius+","+outerRadius+")");
+				   
+				
+					
+				   
+					arcs_2.append("path")  
+						.attr("fill",function(d,i){  
+							return color;  
+						})
+						.attr("d",function(d){ 
+							return arc_2(d);  
+						});  
+					  /*
+					arcs.append("text")  
+						.attr("transform",function(d){  
+							return "translate(" + arc.centroid(d) + ")";  
+						})  
+						.attr("text-anchor","middle");  
+						*/
+
+						
+	
+//***********************绘制第三产业****************************************
+			
+			
+			var cur_3_in = -1;
+			var cur_3_out = 0;
+					var pie3 = d3.layout.pie();
+					var arc_3 = d3.svg.arc()
+									.innerRadius(function(d){
+									cur_3_in++;
+										return outerRadius_2[cur_3_in];
+									})  
+									.outerRadius(outerRadius1);  
+
+					var color = "#EE7600";  		
+					//console.log(Gdp3Total);
+					var piedata_3 = pie3(Gdp3Total);
+					//console.log(piedata_3);
+					for(var i = 0; i <parseInt(slider1.value()*61+1891) - 1951; i++)
+					{
+						piedata_3[i].startAngle = i*((Math.PI)*2/ProviceNum)+0.02;
+						piedata_3[i].endAngle = (i+1)*((Math.PI)*2/ProviceNum) - 0.02;
+					}
+					
+					//设置每个小扇形的固定角度
+					
+					var arcs_3 = svg1.selectAll("g.arc_3")  
+								  .data(piedata_3)  
+								  .enter()  
+								  .append("g")
+								  .attr("class","arc_3")
+								  //.attr("transform","translate(250,150)")
+								  .attr("transform","translate("+outerRadius+","+outerRadius+")");
+				    
+				   
+				
+					
+				   
+					arcs_3.append("path")  
+						.attr("fill",function(d,i){  
+							return color;  
+						})
+						.attr("d",function(d){ 
+							return arc_3(d);  
+						});  
+
+        
+}
+	//画折线图所需数据
+	var dataRect= new Array();
+	var svg2;
+	var title="全国GDP";
+	for(var i=0;i<ProviceNum;i++)
+	    dataRect[i]=GDPdata[i];
+	//画折线图
+	drawRect();
+//第三个svg
+function drawRect(){
+        var datas=[];
+		var xMarks=[];
+		var w=600;
+		var h=400;
+		var padding=50;
+		//用一个变量存储标题和副标题的高度，如果没有标题什么的，就为0
+		var head_height=20;
+		var subTitle="1952年至 2013年";
+		//用一个变量计算底部的高度，如果不是多系列，就为0
+		var foot_height=padding;
+		//模拟数据
+		getData();
+		//定义画布
+		svg2=d3.select("body")
+				.append("svg")
+				.attr("width",w)
+				.attr("height",h)
+				.attr("class","map_3");
+		//添加背景
+		svg2.append("g")
+			.append("rect")
+			.attr("x",0)
+			.attr("y",0)
+			.attr("width",w)
+			.attr("height",h)
+			.style("fill","#FFF")
+			.style("stroke-width",2)
+			.style("stroke","#E7E7E7");
+		//添加标题
+		if(title!="")
+		{
+			svg2.append("g")
+				.append("text")
+				.text(title)
+				.attr("class","title")
+				.attr("x",w/2)
+				.attr("y",head_height);
+			head_height+=20;
+		}
+		//添加副标题
+		if(subTitle!="")
+		{
+			svg2.append("g")
+				.append("text")
+				.text(subTitle)
+				.attr("class","subTitle")
+				.attr("x",w/2)
+				.attr("y",head_height);
+			head_height+=20;
+		}
+		//横坐标轴比例尺
+		var xScale = d3.scale.linear()
+					.domain([0,datas.length-1])
+					.range([padding,w-padding]);
+		//纵坐标轴比例尺
+		var yScale = d3.scale.linear()
+						.domain([0,10000])
+						.range([h-foot_height,head_height]);
+		//定义横轴网格线
+		var xInner = d3.svg.axis()
+						.scale(xScale)
+						.tickSize(-(h-head_height-foot_height),0,0)
+						.orient("bottom")
+						.ticks(datas.length);
+		//添加横轴网格线
+		svg2.append("g")
+			.attr("class","inner_line")
+			.attr("transform", "translate(0," + (h - padding) + ")")
+			.call(xInner)
+			.selectAll("text")
+			.text("");
+		//定义纵轴网格线
+		var yInner = d3.svg.axis()
+						.scale(yScale)
+						.tickSize(-(w-padding*2),0,0)
+						.tickFormat("")
+						.orient("left")
+						.ticks(10);
+		//添加纵轴网格线
+		
+		var yBar=svg2.append("g")
+					.attr("class", "inner_line")
+					.attr("transform", "translate("+padding+",0)")
+					.call(yInner);
+		//定义横轴
+		var xAxis = d3.svg.axis()
+						.scale(xScale)
+						.orient("bottom")
+						.ticks(10);
+		//添加横坐标轴并通过编号获取对应的横轴标签
+		var xBar=svg2.append("g")
+					.attr("class","axis")
+					.attr("transform", "translate(0," + (h - padding) + ")")
+					.call(xAxis)
+					.selectAll("text")
+					.text(function(d){return xMarks[d];});
+		//定义纵轴
+		var yAxis = d3.svg.axis()
+						.scale(yScale)
+						.orient("left")
+						.ticks(10);
+		//添加纵轴
+		var yBar=svg2.append("g")
+					.attr("class", "axis")
+					.attr("transform", "translate("+padding+",0)")
+					.call(yAxis);
+		//添加折线
+		var line = d3.svg.line()
+						.x(function(d,i){return xScale(i);})
+						.y(function(d){return yScale(d);});
+		var path=svg2.append("path")
+					.attr("d", line(datas))
+					.style("fill","#F00")
+					.style("fill","none")
+					.style("stroke-width",1)
+					.style("stroke","#09F")
+					.style("stroke-opacity",0.9);
+		//添加系列的小圆点
+		svg2.selectAll("circle")
+			.data(datas)
+			.enter()
+			.append("circle")
+			.attr("cx", function(d,i) {
+				return xScale(i);
+			})
+			.attr("cy", function(d) {
+				return yScale(d);
+			})
+			.attr("r",5)
+			.attr("fill","#09F").on("mouseover",function(d,i){
+				tooltip2.html(function(){
+							return dataRect[61-i]+"<br>年份:"+xMarks[i];
+					  })
+					  .style("left","1050px")
+					  .style("top", "450px")
+					  .style("opacity",1.0);
+			})
+			.on("mousemove",function(d,i){
+				/* 鼠标移动时，更改样式 left 和 top 来改变提示框的位置 */
+				
+				tooltip2.style("left", "1050px")
+						.style("top", "450px");
+			})
+            .on("mouseout",function(d,i){
+                tooltip2.style("opacity",0.0);
+            });
+			
+		//产生随机数据
+		function getData()
+		{
+			var dataNum=ProviceNum;
+			datas=new Array(); 
+			xMarks=new Array(); 
+			
+			for(var i=1;i<=dataNum;i++)
+			{
+				datas.push(dataRect[dataNum-i]);
+				xMarks.push(i+1951);
+			}
+		}
+}
+</script>
+	
+</body>  
+</html>  
